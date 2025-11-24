@@ -7,7 +7,8 @@ import matplotlib
 
 matplotlib.use("TkAgg")
 sigma = 0.1
-M = 10
+M = 100
+k = 100
 rng = np.random.default_rng()
 
 
@@ -122,7 +123,7 @@ class PushingEnv(nn.Module):
 
 
 Ns = 200
-env = PushingEnv(H=200, k=100, c=1)
+env = PushingEnv(H=200, k=k, c=1)
 H = env.H
 u_seq = torch.full((H,), 1.0, requires_grad=True)
 goal = torch.tensor(5.0)
@@ -135,7 +136,7 @@ vars_ = []
 for gtype, name in zip(gtypes, names):
     grads = []
     for _ in range(Ns):
-        env = PushingEnv(H=H, k=100, c=1)
+        env = PushingEnv(H=H, k=k, c=1)
         u_seq = torch.full((H,), 1.0, requires_grad=True)
         x1_0 = torch.tensor(0.0, requires_grad=True)
         v1_0 = torch.tensor(10.0, requires_grad=True)
@@ -161,7 +162,7 @@ plt.legend()
 plt.title("Gradient statistics v0")
 plt.show()
 
-env = PushingEnv(H=200, k=100, c=1)
+env = PushingEnv(H=200, k=k, c=1)
 u_seq = torch.full((env.H,), 1.0)
 x1_0 = torch.tensor(0.0)
 v1_0 = torch.tensor(10.0)
@@ -210,7 +211,7 @@ for gtype, name in zip(gtypes, names):
     v1_0 = torch.tensor(10.0, requires_grad=True)
     opt = torch.optim.SGD([v1_0], lr=0.1)
     for epoch in range(epochs):
-        env = PushingEnv(H=H, k=100, c=1)
+        env = PushingEnv(H=H, k=k, c=1)
         u_seq = torch.full((H,), 1.0, requires_grad=True)
         x1_0 = torch.tensor(0.0)
         x2_0 = torch.tensor(2.0)
@@ -233,7 +234,7 @@ plt.ylabel("Loss")
 plt.show()
 
 for gtype, name in zip(gtypes, names):
-    env = PushingEnv(H=200, k=100, c=1)
+    env = PushingEnv(H=200, k=k, c=1)
     u_seq = torch.full((env.H,), 1.0)
     x1_0 = torch.tensor(0.0)
     v1_0 = torch.tensor(v0_trained[name])
