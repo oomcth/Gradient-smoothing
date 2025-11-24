@@ -104,6 +104,51 @@ def visualize_derivatives(f, M=100):
     plt.show()
 
 
+def gradient_variance(f, grad_fn, x, M, N_samples=100):
+    grads = np.array([grad_fn(f, x, M) for _ in range(N_samples)])
+    mean_grad = np.mean(grads)
+    var = np.mean((grads - mean_grad) ** 2) * N_samples / (N_samples - 1)
+    return var
+
+
+x = 0.1
+M_values = np.arange(10, 1001, 10)
+var_zo = []
+var_fo = []
+for M in M_values:
+    var_zo.append(gradient_variance(coulomb_friction, zo_gradient, x, M))
+    var_fo.append(gradient_variance(coulomb_friction, fo_gradient, x, M))
+
+plt.figure(figsize=(8, 5))
+plt.plot(M_values, var_zo, label="ZO gradient variance")
+plt.plot(M_values, var_fo, label="FO gradient variance")
+plt.xlabel("M")
+plt.ylabel("Estimated variance")
+plt.yscale("log")
+plt.title("Variance of ZO and FO gradients as a function of M")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
+M_values = np.arange(10, 1001, 10)
+var_zo = []
+var_fo = []
+for M in M_values:
+    var_zo.append(gradient_variance(smoothed_coulomb_friction, zo_gradient, x, M))
+    var_fo.append(gradient_variance(smoothed_coulomb_friction, fo_gradient, x, M))
+
+plt.figure(figsize=(8, 5))
+plt.plot(M_values, var_zo, label="ZO gradient variance")
+plt.plot(M_values, var_fo, label="FO gradient variance")
+plt.xlabel("M")
+plt.ylabel("Estimated variance")
+plt.yscale("log")
+plt.title("Variance of ZO and FO gradients as a function of M")
+plt.legend()
+plt.grid(True)
+plt.show()
+
 visualize(coulomb_friction)
 visualize_derivatives(coulomb_friction, int(M / 10))
 visualize(coulomb_friction)
