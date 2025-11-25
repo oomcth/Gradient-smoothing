@@ -4,10 +4,12 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import matplotlib
+from tqdm import tqdm
 
 matplotlib.use("TkAgg")
 sigma = 0.1
 M = 100
+v0 = 3.0
 k = 100
 rng = np.random.default_rng()
 
@@ -52,6 +54,30 @@ def bi_gb(x1, x2, k):
     return f_vals.mean(0)
 
 
+x1_vals = np.linspace(-1.5, 1.5, 200)
+x2 = 0
+g_true = grad_F_contact(x1_vals, x2, k)[:, 0]
+g_zo = np.array([zo_gb(x1, x2, k)[0] for x1 in x1_vals])
+g_fo = np.array([fo_gb(x1, x2, k)[0] for x1 in x1_vals])
+f_vals = F_contact_np(x1_vals, x2, k)
+
+fig, axs = plt.subplots(2, 1, figsize=(7, 6), sharex=True, constrained_layout=True)
+
+axs[0].plot(x1_vals, f_vals, color="C0", label="F_contact(x1, x2=0)")
+axs[0].set_ylabel("F_contact")
+axs[0].legend()
+axs[0].grid(True)
+
+axs[1].plot(x1_vals, g_true, label="Gradient analytique", color="k", lw=2)
+axs[1].plot(x1_vals, g_zo, label="Gradient ZO (zero-order)", color="C1", alpha=0.8)
+axs[1].plot(x1_vals, g_fo, label="Gradient FO", color="C2", alpha=0.8)
+axs[1].set_xlabel("x1")
+axs[1].set_ylabel("∂F/∂x1")
+axs[1].legend()
+axs[1].grid(True)
+plt.show()
+
+
 class F_contact(torch.autograd.Function):
     @staticmethod
     def forward(ctx, x1, x2, k, gtype=2):
@@ -93,6 +119,10 @@ class PushingEnv(nn.Module):
 
     def step(self, x1, v1, x2, v2, u, gtype):
         F_contact_ = F_contact.apply(x1, x2, self.k, gtype)
+
+        # penetration = x1 + 1 - x2
+        # penetration = torch.clamp(penetration, min=0)
+        # F_contact_ = -self.k * penetration
         F1 = F_contact_ - self.c * v1
         F2 = -F_contact_ - self.c * v2
         v1 = v1 + F1 * self.dt
@@ -139,7 +169,7 @@ for gtype, name in zip(gtypes, names):
         env = PushingEnv(H=H, k=k, c=1)
         u_seq = torch.full((H,), 1.0, requires_grad=True)
         x1_0 = torch.tensor(0.0, requires_grad=True)
-        v1_0 = torch.tensor(10.0, requires_grad=True)
+        v1_0 = torch.tensor(v0, requires_grad=True)
         x2_0 = torch.tensor(2.0, requires_grad=True)
         v2_0 = torch.tensor(0.0, requires_grad=True)
         loss, _, _ = env(u_seq, x1_0, v1_0, x2_0, v2_0, goal, gtype)
@@ -165,7 +195,7 @@ plt.show()
 env = PushingEnv(H=200, k=k, c=1)
 u_seq = torch.full((env.H,), 1.0)
 x1_0 = torch.tensor(0.0)
-v1_0 = torch.tensor(10.0)
+v1_0 = torch.tensor(v0)
 x2_0 = torch.tensor(2.0)
 v2_0 = torch.tensor(0.0)
 traj_x1, traj_x2 = env.simulate(u_seq, x1_0, v1_0, x2_0, v2_0, 2)
@@ -202,15 +232,15 @@ ani = FuncAnimation(
 )
 plt.show()
 
-epochs = 20
+epochs = 2000
 loss_hist = {}
 v0_trained = {}
 
 for gtype, name in zip(gtypes, names):
     losses = []
-    v1_0 = torch.tensor(10.0, requires_grad=True)
-    opt = torch.optim.SGD([v1_0], lr=0.1)
-    for epoch in range(epochs):
+    v1_0 = torch.tensor(v0, requires_grad=True)
+    opt = torch.optim.SGD([v1_0], lr=1e-2)
+    for epoch in tqdm(range(epochs)):
         env = PushingEnv(H=H, k=k, c=1)
         u_seq = torch.full((H,), 1.0, requires_grad=True)
         x1_0 = torch.tensor(0.0)
@@ -231,6 +261,7 @@ plt.legend()
 plt.title("Loss per epoch")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
+plt.yscale("log")
 plt.show()
 
 for gtype, name in zip(gtypes, names):
